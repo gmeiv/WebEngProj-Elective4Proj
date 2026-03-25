@@ -1,36 +1,28 @@
-# --- STAGE 1: Dependencies Cache ---
-FROM node:20-alpine AS deps
-
-WORKDIR /app
-
-# Copy package files first to cache node_modules
-COPY package.json package-lock.json ./
-RUN npm ci
-
-# --- STAGE 2: Build Application ---
+# --- BUILD STAGE ---
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy cached dependencies
-COPY --from=deps /app/node_modules ./node_modules
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build EE app
+# Build the app
 RUN npm run build
 
-# --- STAGE 3: Production ---
+# --- PRODUCTION STAGE ---
 FROM nginx:stable-alpine
 
-# Clean default Nginx html folder
+# Remove default nginx content
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy built application from builder stage
+# Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configure SPA routing for React Router
+# Configure SPA routing (React Router)
 RUN echo 'server { \
     listen 80; \
     location / { \
@@ -42,9 +34,6 @@ RUN echo 'server { \
 
 EXPOSE 80
 
-# Healthcheck to ensure deployment is live
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD wget -qO- http://localhost:80/ || exit 1
+HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:80/ || exit 1
 
-# Run Nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]
