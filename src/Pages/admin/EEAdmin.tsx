@@ -140,7 +140,7 @@ export default function EEAdminPage() {
                   className="rounded-full border border-gray-400 px-5 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
                 >
                   Logout
-                </button>
+               
                 <Link
                   to={`/dept/${baseDept.code}`}
                   className="rounded-full border border-gray-400 px-5 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
