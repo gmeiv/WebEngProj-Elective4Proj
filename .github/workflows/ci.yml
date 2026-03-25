@@ -20,14 +20,19 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --ignore-scripts
+          npm rebuild
+          npm run postinstall
+          npm install esbuild --force
 
       - name: Lint, Typecheck, Test
         run: |
           npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
           npx tsc -b || true
           npx vitest run
-
+          
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
