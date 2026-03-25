@@ -21,10 +21,16 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Clean slate
           rm -rf node_modules package-lock.json
-          npm install --ignore-scripts
+
+          # Install dependencies normally
+          npm install
+
+          # Rebuild native bindings (like esbuild)
           npm rebuild
-          npm run postinstall
+
+          # Force install esbuild to make sure the binary exists
           npm install esbuild --force
 
       - name: Lint, Typecheck, Test
@@ -32,7 +38,7 @@ jobs:
           npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
           npx tsc -b || true
           npx vitest run
-          
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
