@@ -57,10 +57,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker Image
+      - name: Build Docker Image with Layer Cache
         run: |
           IMAGE_TAG="ghcr.io/gmeiv/webeng-ee:latest"
-          docker build -t $IMAGE_TAG .
+          echo "Building Docker image $IMAGE_TAG..."
+          # Use existing image as cache to reuse unchanged layers
+          docker build --cache-from $IMAGE_TAG -t $IMAGE_TAG .
           echo "Built $IMAGE_TAG"
 
       - name: Verify Docker Image
@@ -76,3 +78,6 @@ jobs:
           if [ -n "$RENDER_HOOK" ]; then
             curl -X POST "$RENDER_HOOK"
           fi
+
+      - name: Cleanup Docker to save runner storage
+        run: docker system prune -af
