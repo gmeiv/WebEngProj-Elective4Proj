@@ -12,29 +12,49 @@ import {
   type DepartmentEditableContent,
 } from "../../lib/departmentAdmin";
 import { mergeWithShape } from "../../lib/jsonShape";
+import type { DepartmentData } from "../../types/department";
 import AdminAccessGate from "../../components/AdminAccessGate";
 import JsonValueEditor from "../../components/JsonValueEditor";
 import ResizablePagePreview from "../../components/ResizablePagePreview";
 
 const code = "EE" as const;
 
-const baseDept = getDeptDefaults(code);
-
 export default function EEAdminPage() {
-  const [form, setForm] = useState<DepartmentEditableContent | null>(() => {
-    const defaults = extractEditableContent(baseDept);
-    const draft = loadDeptDraft(code);
-    const overrides = loadDeptOverrides(code);
-    return mergeWithShape(defaults, draft ?? overrides);
-  });
+  const [baseDept, setBaseDept] = useState<DepartmentData | null>(null);
+  const [form, setForm] = useState<DepartmentEditableContent | null>(null);
   const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    try {
+      const data = getDeptDefaults(code);
+      const defaults = extractEditableContent(data);
+      const draft = loadDeptDraft(code);
+      const overrides = loadDeptOverrides(code);
+
+      setBaseDept(data);
+      setForm(mergeWithShape(defaults, draft ?? overrides));
+      setError("");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load department admin data.";
+      setError(message);
+    }
+  }, []);
 
   useEffect(() => {
     if (!form) return;
     saveDeptDraft(code, form);
   }, [form]);
 
-  if (!form) {
+  if (error) {
+    return (
+      <div className="min-h-screen grid place-items-center px-6 text-center">
+        <p className="text-sm text-red-700">{error}</p>
+      </div>
+    );
+  }
+
+  if (!baseDept || !form) {
     return (
       <div className="min-h-screen grid place-items-center px-6 text-center">
         <p className="text-sm text-gray-600">Loading department admin...</p>
@@ -140,7 +160,7 @@ export default function EEAdminPage() {
                   className="rounded-full border border-gray-400 px-5 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
                 >
                   Logout
-               
+                </button>
                 <Link
                   to={`/dept/${baseDept.code}`}
                   className="rounded-full border border-gray-400 px-5 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
