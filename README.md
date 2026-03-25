@@ -13,6 +13,20 @@ npm install
 npm run dev
 ```
 
+## CI/CD
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+- **On push/PR to main/master**: Runs linting, builds the project, and deploys to GitHub Pages if successful.
+- **Wrong code**: Build/lint failures will prevent deployment and notify via GitHub.
+- **Correct code**: Automatically deploys and updates the live website.
+
+## Build
+
+```bash
+npm run build
+```
+
 ## Build
 
 ```bash

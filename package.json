@@ -38,5 +38,21 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1"
-  }
+  },
+  "description": "Multi-group collaboration website with:",
+  "main": "eslint.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gmeiv/WebEngProj-Elective4Proj.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gmeiv/WebEngProj-Elective4Proj/issues"
+  },
+  "homepage": "https://github.com/gmeiv/WebEngProj-Elective4Proj#readme"
 }
