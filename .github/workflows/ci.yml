@@ -8,67 +8,47 @@ on:
   workflow_dispatch:
 
 jobs:
-  # --- JOB 1: DEPENDENCY INSTALL & LINT ---
-  setup-and-lint:
+  # --- JOB 1: LINT ---
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
       - name: Install Dependencies
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install
-          npm rebuild
-          npm install esbuild --platform=linux --arch=x64 --force
-
-      - name: Run Lint
+        run: npm ci
+      - name: Lint EE files
         run: |
           npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
-          echo "Lint completed."
 
-  # --- JOB 2: TYPECHECK & UNIT TESTS ---
+  # --- JOB 2: TEST ---
   test:
     runs-on: ubuntu-latest
-    needs: setup-and-lint
+    needs: lint
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
       - name: Install Dependencies
-        run: |
-          npm ci
-          npm rebuild
-          npm install esbuild --platform=linux --arch=x64 --force
-
+        run: npm ci
       - name: Typecheck
-        run: |
-          npx tsc -b || true
-          echo "Typecheck finished."
+        run: npx tsc -b || true
+      - name: Run Tests
+        run: npx vitest run || echo "Some tests failed, but continuing."
 
-      - name: Run Unit Tests
-        run: |
-          npx vitest run || echo "Some tests failed but continuing to deploy."
-
-  # --- JOB 3: DOCKER BUILD & DEPLOY ---
+  # --- JOB 3: BUILD AND DEPLOY DOCKER IMAGE ---
   deploy:
     runs-on: ubuntu-latest
     needs: test
+    if: github.ref == 'refs/heads/dept/EE'
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -81,17 +61,18 @@ jobs:
         run: |
           IMAGE_TAG="ghcr.io/gmeiv/webeng-ee:latest"
           docker build -t $IMAGE_TAG .
-          echo "Docker build complete."
+          echo "Built $IMAGE_TAG"
 
-      - name: Verify Build Artifacts
+      - name: Verify Docker Image
         run: docker run --rm ghcr.io/gmeiv/webeng-ee:latest ls /usr/share/nginx/html
 
       - name: Push Docker Image
-        if: github.ref == 'refs/heads/dept/EE'
         run: docker push ghcr.io/gmeiv/webeng-ee:latest
 
-      - name: Trigger Deployment
-        if: github.ref == 'refs/heads/dept/EE' && env.RENDER_HOOK != ''
+      - name: Trigger Render Deployment
         env:
           RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
-        run: curl -X POST "$RENDER_HOOK"
+        run: |
+          if [ -n "$RENDER_HOOK" ]; then
+            curl -X POST "$RENDER_HOOK"
+          fi
