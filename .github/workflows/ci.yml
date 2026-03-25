@@ -79,16 +79,16 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          IMAGE_TAG="ghcr.io/${{ github.repository_owner }}/webeng-ee:latest"
+          IMAGE_TAG="ghcr.io/gmeiv/webeng-ee:latest"
           docker build -t $IMAGE_TAG .
           echo "Docker build complete."
 
       - name: Verify Build Artifacts
-        run: docker run --rm ghcr.io/${{ github.repository_owner }}/webeng-ee:latest ls /usr/share/nginx/html
+        run: docker run --rm ghcr.io/gmeiv/webeng-ee:latest ls /usr/share/nginx/html
 
       - name: Push Docker Image
         if: github.ref == 'refs/heads/dept/EE'
-        run: docker push ghcr.io/${{ github.repository_owner }}/webeng-ee:latest
+        run: docker push ghcr.io/gmeiv/webeng-ee:latest
 
       - name: Trigger Deployment
         if: github.ref == 'refs/heads/dept/EE' && env.RENDER_HOOK != ''
