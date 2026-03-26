@@ -1,17 +1,17 @@
 /**
  * Simple calculator functions
- * INTENTIONALLY BUGGY - for testing demonstration
+ * Testing demonstration - now with correct implementations
  */
 
-// WRONG IMPLEMENTATION (will fail tests)
+// CORRECT IMPLEMENTATIONS (will pass tests)
 export function add(a: number, b: number): number {
-  return a  // ❌ BUG: Returns only first number, ignores b
+  return a + b  // ✅ FIXED: Returns sum of both numbers
 }
 
 export function subtract(a: number, b: number): number {
-  return a  // ❌ BUG: Should return a - b
+  return a - b  // ✅ FIXED: Returns difference
 }
 
 export function multiply(a: number, b: number): number {
-  return a * b  // ✅ This one is correct
+  return a * b  // ✅ Already correct
 }
