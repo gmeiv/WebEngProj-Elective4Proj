@@ -47,14 +47,22 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Vitest
-        run: npx vitest run || echo "Some tests failed, continuing..."
+      - name: Run Vitest with Coverage
+        run: npx vitest run --coverage
 
-      - name: Upload Test Artifacts
+      - name: Upload Coverage Reports
         uses: actions/upload-artifact@v4
         with:
-          name: vitest-reports
-          path: test-results/
+          name: coverage-reports
+          path: coverage/
+
+      - name: Comment Coverage to PR
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
   # --- JOB 3: BUILD AND DEPLOY DOCKER IMAGE ---
   deploy:
