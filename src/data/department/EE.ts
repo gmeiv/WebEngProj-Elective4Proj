@@ -501,7 +501,7 @@ export const EE = {
             title: "Facilities and Building Systems Engineer",
             text: "Designs and maintains electrical systems in large facilities."
           }
-        ]]
+        ]
       },
       {
         title: "Research, Development, Consulting, and Academia",
