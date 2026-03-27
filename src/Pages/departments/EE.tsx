@@ -74,7 +74,7 @@ export default function EEPage() {
               <div className="pt-2 border-l-4 border-black pl-5 inline-block lg:block text-left">
                 <p className="text-base md:text-lg font-bold text-gray-900 leading-tight uppercase">
                   Bachelor of Science in <br />
-                  <span className="text-gray-500 font-medium">Electrical Engineering</span>
+                  <span className="text-gray-500 font-medium">Testing for PR</span>
                 </p>
               </div>
 
