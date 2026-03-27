@@ -85,12 +85,14 @@ jobs:
           IMAGE_TAG="ghcr.io/gmeiv/webeng-ee:${{ github.sha }}"
           LATEST_TAG="ghcr.io/gmeiv/webeng-ee:latest"
 
-          echo "Building image..."
           docker build -t $IMAGE_TAG .
-
-          echo "Tagging as latest..."
           docker tag $IMAGE_TAG $LATEST_TAG
 
-          echo "Pushing images..."
           docker push $IMAGE_TAG
           docker push $LATEST_TAG
+
+      - name: Trigger Render Deployment
+        env:
+          RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          curl -X POST "$RENDER_HOOK"
