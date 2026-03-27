@@ -59,11 +59,13 @@ jobs:
           name: coverage-reports
           path: coverage/
 
-  # --- JOB 3: BUILD + PUSH + DEPLOY ---
-  deploy:
-    runs-on: ubuntu-latest
+   # --- STAGE 2: BUILD + PUSH + DEPLOY ---
+  build-and-deploy:
     needs: test
-    if: github.ref == 'refs/heads/dept/EE'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout Code
@@ -76,27 +78,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker Image
+      - name: Build and Tag Docker Image (CE STYLE)
         run: |
-          IMAGE="ghcr.io/gmeiv/webeng-ee"
-          SHA_TAG="${IMAGE}:${{ github.sha }}"
-          LATEST_TAG="${IMAGE}:latest"
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          SAFE_TAG=$(echo "${{ github.ref_name }}" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
 
-          docker build -t $SHA_TAG .
-          docker tag $SHA_TAG $LATEST_TAG
+          IMAGE_ID="ghcr.io/$OWNER_LOWER/webeng-ee:$SAFE_TAG"
+
+          echo "IMAGE_ID=$IMAGE_ID" >> $GITHUB_ENV
+
+          docker build -t $IMAGE_ID .
+
+          # optional verification (same as CE)
+          docker run --rm $IMAGE_ID ls /usr/share/nginx/html
 
       - name: Push Docker Image
-        run: |
-          IMAGE="ghcr.io/gmeiv/webeng-ee"
-          SHA_TAG="${IMAGE}:${{ github.sha }}"
-          LATEST_TAG="${IMAGE}:latest"
-
-          docker push $SHA_TAG
-          docker push $LATEST_TAG
+        run: docker push ${{ env.IMAGE_ID }}
 
       - name: Trigger Render Deployment
+        if: success()
         env:
-          RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          RENDER_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          echo "Triggering Render..."
-          curl -X POST "$RENDER_HOOK"
+          echo "Triggering Render Deployment..."
+          curl -X POST "$RENDER_URL"
