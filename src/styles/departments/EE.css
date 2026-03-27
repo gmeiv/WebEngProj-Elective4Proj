@@ -1,7 +1,8 @@
 /* Department-scoped custom CSS for EE page. */
-
+/* ERROR_CSS_001: intentionally broken CSS syntax */
 #so-icon {
   filter: invert(100%)
+  broken-property: this is not valid css;
 }
 #careers .card, #so .card {
   border: 1px solid #ccc;

@@ -7,6 +7,8 @@ import { mergeDeptWithOverrides } from "../../lib/departmentAdmin";
 import { EE } from "../../data/department/EE";
 import "../../styles/departments/EE.css";
 
+// ERROR_TSX_001: intentionally broken component
+const BrokenComponent = () => { return <div>{{ broken: true }}</div>;
 
 export default function EEPage() {
   const [baseDept] = useState<typeof EE>(EE);
