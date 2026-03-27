@@ -546,13 +546,3 @@ export const EE = {
     ]
   }
 };
-
-// Department welcome message
-export const departmentWelcomeMessage = "Welcome to the Electrical Engineering Department - Leading Innovation in Power and Energy Systems";
-
-// Department contact information
-export const departmentContact = {
-  email: "ee@bulsu.edu.ph",
-  phone: "+63 (44) 791-0900",
-  location: "Bulacan State University, College of Engineering"
-};
