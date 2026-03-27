@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  # --- JOB 1: LINT ---
-  lint:
+  # --- 1. VALIDATION (Always Runs) ---
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -25,87 +25,29 @@ jobs:
         run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
       - name: Type Check
         run: npx tsc -b || true
-
-  # --- JOB 2: TEST ---
-  test:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - name: Install Dependencies
-        run: npm ci
       - name: Run Vitest
         run: npx vitest run --coverage
-      - name: Upload Coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
-          path: coverage/
 
-  # --- JOB 3: AUTO-MERGE (ONLY FOR PRs) ---
-  auto-merge:
+  # --- 2. PR LOGIC (Only runs if it's a Pull Request) ---
+  handle-pr:
     runs-on: ubuntu-latest
-    needs: test
-    if: success() && github.event_name == 'pull_request'
+    needs: validate
+    # This job only exists if the event is a PR
+    if: github.event_name == 'pull_request'
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      - name: Squash and Merge
-        run: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
+      - name: Attempt Merge
+        id: merge
+        continue-on-error: true
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # --- JOB 4: BUILD + PUSH + DEPLOY ---
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    needs: [test, auto-merge]
-    if: |
-      always() && 
-      (needs.test.result == 'success') && 
-      (needs.auto-merge.result == 'success' || needs.auto-merge.result == 'skipped')
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          ref: dept/EE 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and Tag Docker Image
-        run: |
-          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_LATEST="ghcr.io/$OWNER_LOWER/webeng-ee:latest"
-          echo "IMAGE_LATEST=$IMAGE_LATEST" >> $GITHUB_ENV
-          docker build --no-cache -t $IMAGE_LATEST .
-      - name: Push Docker Image
-        run: docker push ${{ env.IMAGE_LATEST }}
-      - name: Trigger Render Deployment
-        env:
-          RENDER_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
-        run: curl -X POST "$RENDER_URL"
-
-  # --- JOB 5: NOTIFY FAILURE (ONLY FOR PRs) ---
-  notify-failure:
-    runs-on: ubuntu-latest
-    needs: [test, auto-merge, build-and-deploy]
-    if: failure() && github.event_name == 'pull_request'
-    steps:
-      - name: Notify PR
+      - name: Notify Failure
+        if: steps.merge.outcome == 'failure'
         uses: actions/github-script@v7
         with:
           script: |
@@ -113,19 +55,45 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `❌ **Deployment/Merge Pipeline Failed**\n\nThe automation stopped. Please check the logs in the Actions tab.`
+              body: `❌ **PR Automation Failed**\n\nTests passed, but the merge failed (check for conflicts).`
             });
 
-  # --- JOB 6: AUTO-CLOSE (ONLY FOR PRs) ---
-  auto-close-pr:
-    runs-on: ubuntu-latest
-    needs: [auto-merge, build-and-deploy]
-    if: always() && github.event_name == 'pull_request'
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Close Pull Request
-        run: |
-          gh pr close ${{ github.event.pull_request.number }} --comment "CI/CD Pipeline complete. PR closed." || echo "PR already closed"
+      - name: Auto-Close PR
+        if: always()
+        run: gh pr close ${{ github.event.pull_request.number }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- 3. DEPLOYMENT (Runs if Test is successful) ---
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    # If it's a PR, wait for 'handle-pr'. If it's a push, wait for 'validate'.
+    needs: [validate, handle-pr]
+    if: |
+      always() && 
+      needs.validate.result == 'success' && 
+      (github.event_name == 'push' || needs.handle-pr.result == 'success')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: dept/EE
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_LATEST="ghcr.io/$OWNER_LOWER/webeng-ee:latest"
+          docker build --no-cache -t $IMAGE_LATEST .
+          docker push $IMAGE_LATEST
+      - name: Trigger Render
+        env:
+          RENDER_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: curl -X POST "$RENDER_URL"
