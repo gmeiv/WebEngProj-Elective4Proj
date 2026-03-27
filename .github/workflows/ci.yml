@@ -83,23 +83,14 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           IMAGE_TAG="ghcr.io/gmeiv/webeng-ee:${{ github.sha }}"
-          
+          LATEST_TAG="ghcr.io/gmeiv/webeng-ee:latest"
+
+          echo "Building image..."
           docker build -t $IMAGE_TAG .
-          
-          # Also tag as latest
-          docker tag $IMAGE_TAG ghcr.io/gmeiv/webeng-ee:latest
-          
-          # Push both tags
+
+          echo "Tagging as latest..."
+          docker tag $IMAGE_TAG $LATEST_TAG
+
+          echo "Pushing images..."
           docker push $IMAGE_TAG
-          docker push ghcr.io/gmeiv/webeng-ee:latest
-
-            - name: Verify Docker Image
-              run: docker run --rm ghcr.io/gmeiv/webeng-ee:latest ls /usr/share/nginx/html
-
-            - name: Trigger Render Deployment
-              env:
-                RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
-              run: |
-                if [ -n "$RENDER_HOOK" ]; then
-                  curl -X POST "$RENDER_HOOK"
-                fi
+          docker push $LATEST_TAG
