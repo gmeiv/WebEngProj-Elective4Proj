@@ -12,6 +12,7 @@ jobs:
   # --- JOB 1: LINT ---
   lint:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -26,7 +27,7 @@ jobs:
         run: npm ci
 
       - name: Run ESLint
-        run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx src/Page/styles/departments/EE.css
+        run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
 
       - name: Type Check
         run: npx tsc -b || true
@@ -36,6 +37,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: lint
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -78,6 +80,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # --- BUILD IMAGE ---
       - name: Build and Tag Docker Image
         run: |
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -92,11 +95,13 @@ jobs:
           docker build --no-cache -t $IMAGE_VERSION -t $IMAGE_LATEST .
           docker run --rm $IMAGE_VERSION ls /usr/share/nginx/html
 
+      # --- PUSH BOTH TAGS ---
       - name: Push Docker Image
         run: |
           docker push ${{ env.IMAGE_VERSION }}
           docker push ${{ env.IMAGE_LATEST }}
 
+      # --- TRIGGER RENDER DEPLOY ---
       - name: Trigger Render Deployment
         if: success()
         env:
@@ -104,37 +109,3 @@ jobs:
         run: |
           echo "Triggering Render Deployment..."
           curl -X POST "$RENDER_URL"
-
-
-  # --- JOB 4: POST-DEPLOY PR CHECK ---
-  post-deploy-check:
-    runs-on: ubuntu-latest
-    needs: build-and-deploy
-
-    steps:
-      - name: Check Open Pull Requests
-        id: pr_check
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prs = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open'
-            });
-
-            core.setOutput("count", prs.data.length);
-
-            if (prs.data.length > 0) {
-              console.log(`⚠️ There are ${prs.data.length} open pull request(s).`);
-            } else {
-              console.log("✅ No open pull requests.");
-            }
-
-      - name: Notify Result
-        run: |
-          if [ "${{ steps.pr_check.outputs.count }}" -gt 0 ]; then
-            echo "⚠️ Deployment done, but there are still OPEN PRs!"
-          else
-            echo "✅ Deployment done and no pending PRs."
-          fi
