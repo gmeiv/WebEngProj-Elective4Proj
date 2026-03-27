@@ -7,6 +7,7 @@ import { mergeDeptWithOverrides } from "../../lib/departmentAdmin";
 import { EE } from "../../data/department/EE";
 import "../../styles/departments/EE.css";
 
+// TESTING ONLY: for auto-merge
 
 export default function EEPage() {
   const [baseDept] = useState<typeof EE>(EE);
