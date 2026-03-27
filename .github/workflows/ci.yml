@@ -2,11 +2,9 @@ name: EE CI/CD Pipeline
 
 on:
   push:
-    branches: 
-      - dept/EE
+    branches: [dept/EE]
   pull_request:
-    branches:
-      - dept/EE
+    branches: [dept/EE]
   workflow_dispatch:
 
 jobs:
@@ -27,18 +25,6 @@ jobs:
         run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
       - name: Type Check
         run: npx tsc -b || true
-      - name: Notify Lint Failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            if (!context.payload.pull_request) return;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: `❌ **Lint Check Failed**\n\nESLint or TypeScript validation failed. Please check the logs.`
-            });
 
   # --- JOB 2: TEST ---
   test:
@@ -56,18 +42,11 @@ jobs:
         run: npm ci
       - name: Run Vitest
         run: npx vitest run --coverage
-      - name: Notify Test Failure
-        if: failure()
-        uses: actions/github-script@v7
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            if (!context.payload.pull_request) return;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: `❌ **Tests Failed**\n\nUnit tests did not pass. Please fix the failing tests.`
-            });
+          name: coverage-reports
+          path: coverage/
 
   # --- JOB 3: AUTO-MERGE ---
   auto-merge:
@@ -80,19 +59,18 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      - name: Merge Pull Request
-        run: |
-          gh pr merge ${{ github.event.pull_request.number }} --squash --body "Auto-merged by CI/CD Pipeline"
+      - name: Squash and Merge
+        run: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # --- JOB 4: NOTIFY AUTO-MERGE FAILURE ---
-  notify-automerge-failure:
+  notify-failure:
     runs-on: ubuntu-latest
-    needs: auto-merge
+    needs: [test, auto-merge]
     if: failure() && github.event_name == 'pull_request'
     steps:
-      - name: Notify Merge Failure
+      - name: Notify PR
         uses: actions/github-script@v7
         with:
           script: |
@@ -100,10 +78,10 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `⚠️ **Auto-Merge Failed**\n\nTests passed, but the merge failed (likely due to conflicts).`
+              body: `⚠️ **CI/CD Automation Failed**\n\nThe pipeline stopped because tests failed or a merge conflict occurred. Please check the logs.`
             });
 
-  # --- JOB 5: BUILD + PUSH + DEPLOY (ONLY IF MERGED) ---
+  # --- JOB 5: BUILD + PUSH + DEPLOY (ONLY ON SUCCESSFUL MERGE) ---
   build-and-deploy:
     runs-on: ubuntu-latest
     needs: auto-merge
@@ -115,34 +93,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: dept/EE # Build the merged state
+          ref: dept/EE 
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and Push
+      - name: Build and Tag Docker Image
         run: |
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           IMAGE_LATEST="ghcr.io/$OWNER_LOWER/webeng-ee:latest"
-          docker build -t $IMAGE_LATEST .
-          docker push $IMAGE_LATEST
+          echo "IMAGE_LATEST=$IMAGE_LATEST" >> $GITHUB_ENV
+          docker build --no-cache -t $IMAGE_LATEST .
+      - name: Push Docker Image
+        run: docker push ${{ env.IMAGE_LATEST }}
       - name: Trigger Render Deployment
         env:
           RENDER_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: curl -X POST "$RENDER_URL"
 
-  # --- JOB 6: FINAL CLOSE (SUCCESS OR FAILURE) ---
-  closing-pr:
+  # --- JOB 6: AUTO-CLOSE ---
+  auto-close-pr:
     runs-on: ubuntu-latest
-    # Wait for everything else to resolve first
-    needs: [auto-merge, notify-automerge-failure, build-and-deploy]
+    needs: [auto-merge, notify-failure, build-and-deploy]
     if: always() && github.event_name == 'pull_request'
     permissions:
       pull-requests: write
     steps:
       - name: Close Pull Request
-        run: gh pr close ${{ github.event.pull_request.number }} 
+        run: gh pr close ${{ github.event.pull_request.number }} --comment "Workflow finished. Closing PR."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
