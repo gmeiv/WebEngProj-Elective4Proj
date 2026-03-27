@@ -3,6 +3,7 @@ const base = "/departments/EE";
 export const EE = {
   code: "EE",
   title: "ELECTRICAL ENGINEERING",
+  broken: "this is intentionally wrong code - ERROR_TS_001",
   subtitle: "Bachelor of Science in Electrical Engineering",
 
   theme: {
