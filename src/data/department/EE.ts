@@ -3,7 +3,6 @@ const base = "/departments/EE";
 export const EE = {
   code: "EE",
   title: "ELECTRICAL ENGINEERING",
-  broken: "this is intentionally wrong code - ERROR_TS_001",
   subtitle: "Bachelor of Science in Electrical Engineering",
 
   theme: {
@@ -546,4 +545,14 @@ export const EE = {
       }
     ]
   }
+};
+
+// Department welcome message
+export const departmentWelcomeMessage = "Welcome to the Electrical Engineering Department - Leading Innovation in Power and Energy Systems";
+
+// Department contact information
+export const departmentContact = {
+  email: "ee@bulsu.edu.ph",
+  phone: "+63 (44) 791-0900",
+  location: "Bulacan State University, College of Engineering"
 };
