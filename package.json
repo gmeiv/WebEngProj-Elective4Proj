@@ -10,6 +10,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:report": "vitest run --coverage && echo 'Open coverage/index.html to see line-by-line analysis'",
+    "test:lines": "vitest run --reporter=verbose --coverage",
     "preview": "vite preview"
   },
   "dependencies": {
