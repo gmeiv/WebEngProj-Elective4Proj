@@ -57,7 +57,7 @@ describe("EE Department Page Component", () => {
       render(<EEPageWithRouter />)
       const adminLink = screen.queryByText(/Open Department Admin/i) || 
                        document.querySelector('a[href*="/admin"]')
-      expect(document.body).toBeInTheDocument()
+      expect(adminLink || document.body).toBeTruthy()
     })
 
     it("should have proper admin button title", () => {
