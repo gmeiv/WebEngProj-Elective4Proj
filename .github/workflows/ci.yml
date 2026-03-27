@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Run ESLint
-        run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx src/Page/styles/EE.css
+        run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx src/Page/styles/departments/EE.css
 
       - name: Type Check
         run: npx tsc -b || true
