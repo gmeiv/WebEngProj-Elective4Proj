@@ -322,7 +322,7 @@ export default function EEPage() {
             Click on a year level to view the specific courses.
           </p>
           <p className="text-gray-400 text-[13px] md:text-[14px] mb-4 uppercase tracking-wider">
-            Bachelor of Science in Electricallll Engineering  <br /> • Revised 2024   <br /> • CMO 88 Series of 2017 <br className="md:hidden" />
+            Bachelor of Science in Electrical Engineering  <br /> • Revised 2024   <br /> • CMO 88 Series of 2017 <br className="md:hidden" />
           </p>
         </div>
 
@@ -697,7 +697,7 @@ function OutcomeCard({ title, text, iconUrl }: { title: string; text: string; ic
         {iconUrl ? (
           <img id="so-icon" src={iconUrl} alt={title} className="w-10 h-10 object-contain" />
         ) : (
-          <span className="text-gray-400">No Icon</span>
+          <span className="text-blue-400">No Icon</span>
         )}
       </div>
       <div id="so-title" className="mt-4 font-semibold text-gray-900">{title}</div>

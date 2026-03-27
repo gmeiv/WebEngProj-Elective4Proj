@@ -11,6 +11,7 @@ jobs:
   # --- JOB 1: LINT & STATIC ANALYSIS ---
   lint:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -30,10 +31,12 @@ jobs:
       - name: Run TypeScript Type Check
         run: npx tsc -b || true
 
+
   # --- JOB 2: UNIT TESTS ---
   test:
     runs-on: ubuntu-latest
     needs: lint
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -64,15 +67,18 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
-  # --- JOB 3: BUILD AND DEPLOY DOCKER IMAGE ---
+
+  # --- JOB 3: BUILD + PUSH + DEPLOY ---
   deploy:
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/dept/EE'
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # --- LOGIN TO GHCR ---
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -80,19 +86,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
+      # --- BUILD IMAGE ---
+      - name: Build Docker Image
         run: |
-          IMAGE_TAG="ghcr.io/gmeiv/webeng-ee:${{ github.sha }}"
-          LATEST_TAG="ghcr.io/gmeiv/webeng-ee:latest"
+          IMAGE="ghcr.io/gmeiv/webeng-ee"
+          SHA_TAG="${IMAGE}:${{ github.sha }}"
+          LATEST_TAG="${IMAGE}:latest"
 
-          docker build -t $IMAGE_TAG .
-          docker tag $IMAGE_TAG $LATEST_TAG
+          docker build -t $SHA_TAG .
+          docker tag $SHA_TAG $LATEST_TAG
 
-          docker push $IMAGE_TAG
+      # --- PUSH IMAGE ---
+      - name: Push Docker Image
+        run: |
+          IMAGE="ghcr.io/gmeiv/webeng-ee"
+          SHA_TAG="${IMAGE}:${{ github.sha }}"
+          LATEST_TAG="${IMAGE}:latest"
+
+          docker push $SHA_TAG
           docker push $LATEST_TAG
 
+      # --- TRIGGER RENDER DEPLOY ---
       - name: Trigger Render Deployment
         env:
           RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          curl -X POST "$RENDER_HOOK"
+          echo "Triggering Render deploy..."
+          curl -fsSL -X POST "$RENDER_HOOK"
