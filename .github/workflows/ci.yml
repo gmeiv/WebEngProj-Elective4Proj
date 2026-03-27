@@ -8,8 +8,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  # --- 1. VALIDATION (Always Runs) ---
-  validate:
+  # --- 1. LINT AND TEST (Always Runs) ---
+  lint-and-test:
+    name: "Lint and Test"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -21,24 +22,27 @@ jobs:
           cache: 'npm'
       - name: Install Dependencies
         run: npm ci
-      - name: Run ESLint
+      - name: Run Lint
         run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
-      - name: Type Check
+      - name: Run Type Check
         run: npx tsc -b || true
-      - name: Run Vitest
+      - name: Run Unit Tests
         run: npx vitest run --coverage
 
-  # --- 2. PR LOGIC (Only runs if it's a Pull Request) ---
+# --- 2. PR LOGIC (Only runs if it's a Pull Request) ---
   handle-pr:
+    name: "Auto Merge and Close PR"
     runs-on: ubuntu-latest
-    needs: validate
-    # This job only exists if the event is a PR
+    needs: lint-and-test
     if: github.event_name == 'pull_request'
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Attempt Merge
+      - name: Checkout Code
+        uses: actions/checkout@v4  # <--- THIS WAS MISSING AND CAUSED THE ERROR
+
+      - name: Attempt Auto Merge
         id: merge
         continue-on-error: true
         run: |
@@ -46,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Notify Failure
+      - name: Notify Merge Failure
         if: steps.merge.outcome == 'failure'
         uses: actions/github-script@v7
         with:
@@ -55,23 +59,24 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `❌ **PR Automation Failed**\n\nTests passed, but the merge failed (check for conflicts).`
+              body: `❌ **Merge Failed**: Tests passed, but I couldn't auto-merge (likely a conflict).`
             });
 
       - name: Auto-Close PR
         if: always()
-        run: gh pr close ${{ github.event.pull_request.number }}
+        run: gh pr close ${{ github.event.pull_request.number }} --comment "Workflow finished. Closing PR."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # --- 3. DEPLOYMENT (Runs if Test is successful) ---
+  # --- 3. DEPLOYMENT (Success Path) ---
   build-and-deploy:
+    name: "Build and Deploy"
     runs-on: ubuntu-latest
-    # If it's a PR, wait for 'handle-pr'. If it's a push, wait for 'validate'.
-    needs: [validate, handle-pr]
+    needs: [lint-and-test, handle-pr]
+    # This runs if tests passed AND (it's a push OR the PR merge was successful)
     if: |
       always() && 
-      needs.validate.result == 'success' && 
+      needs.lint-and-test.result == 'success' && 
       (github.event_name == 'push' || needs.handle-pr.result == 'success')
     permissions:
       contents: read
