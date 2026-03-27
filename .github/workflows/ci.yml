@@ -264,7 +264,7 @@ jobs:
 
 
 # --- JOB 6: FINAL CLOSE (SUCCESS OR FAILURE) ---
-  final-cleanup-close:
+  closing-pr:
     runs-on: ubuntu-latest
     needs: [auto-merge, notify-automerge-failure]
     if: always() && github.event.pull_request.number != null
@@ -272,8 +272,6 @@ jobs:
       pull-requests: write
     steps:
       - name: Close Pull Request
-        run: |
-          gh pr close ${{ github.event.pull_request.number }} \
-          --comment "CI/CD Pipeline finished. Auto-closing this PR (Success or Failure) as requested."
+        run: gh pr close ${{ github.event.pull_request.number }} 
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
