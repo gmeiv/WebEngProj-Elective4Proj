@@ -65,9 +65,9 @@ export default function EEPage() {
               </p>
               
               <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-black italic tracking-tighter leading-[0.9] lg:leading-[0.85] uppercase">
-                <span className="block text-black">AAAAAAAAAA</span>
+                <span className="block text-black">AYAW KO NA</span>
                 <span className="inline-block bg-linear-to-r from-red-700 to-orange-500 bg-clip-text text-transparent lg:pr-8 lg:-mr-8">
-                  Engineering
+                  gumana ka na pls
                 </span>
               </h1>
               
