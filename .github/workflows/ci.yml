@@ -96,9 +96,6 @@ jobs:
             - name: Verify Docker Image
               run: docker run --rm ghcr.io/gmeiv/webeng-ee:latest ls /usr/share/nginx/html
 
-            - name: Push Docker Image to GHCR
-              run: docker push ghcr.io/gmeiv/webeng-ee:latest
-
             - name: Trigger Render Deployment
               env:
                 RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
