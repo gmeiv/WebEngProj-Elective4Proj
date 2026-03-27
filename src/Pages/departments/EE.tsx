@@ -61,14 +61,14 @@ export default function EEPage() {
               <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-black italic tracking-tighter leading-[0.9] lg:leading-[0.85] uppercase">
                 <span className="block text-black">Electrical</span>
                 <span className="inline-block bg-linear-to-r from-red-700 to-orange-500 bg-clip-text text-transparent lg:pr-8 lg:-mr-8">
-                  Engineering
+                  EngineeringGGGGGGGGGGGGGG
                 </span>
               </h1>
               
               <div className="pt-2 border-l-4 border-black pl-5 inline-block lg:block text-left">
                 <p className="text-base md:text-lg font-bold text-gray-900 leading-tight uppercase">
                   Bachelor of Science in <br />
-                  <span className="text-gray-500 font-medium">Electrical EngineeringGGGGGGG</span>
+                  <span className="text-gray-500 font-medium">Electrical Engineering</span>
                 </p>
               </div>
 
