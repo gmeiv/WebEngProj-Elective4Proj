@@ -7,7 +7,6 @@ import { mergeDeptWithOverrides } from "../../lib/departmentAdmin";
 import { EE } from "../../data/department/EE";
 import "../../styles/departments/EE.css";
 
-// TESTING ONLY: for auto-merge
 
 export default function EEPage() {
   const [baseDept] = useState<typeof EE>(EE);
@@ -20,8 +19,14 @@ export default function EEPage() {
   const [selectedYearId, setSelectedYearId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const bullets = baseDept.curriculum.bullets || [];
-  const [activeIdx, setActiveIdx] = useState(1);
   const members = dept.faculty.members || [];
+  
+  const chairIdx = members.findIndex(m => 
+    m.role?.toLowerCase().includes("program chair") || 
+    m.role?.toLowerCase().includes("chairperson")
+  );
+  
+  const [activeIdx, setActiveIdx] = useState(chairIdx >= 0 ? chairIdx : 0);
   
   useEffect(() => {
     if (!dept) return;
@@ -485,12 +490,14 @@ export default function EEPage() {
             onClick={() => setActiveIdx((prev) => (prev < members.length - 1 ? prev + 1 : 0))}
             className="absolute right-1 md:right-15 top-1/2 -translate-y-1/2 z-50 bg-white/95 backdrop-blur-md p-2 md:p-3 rounded-full shadow-lg border border-red-100 text-red-900 hover:bg-red-900 hover:text-white transition-all active:scale-90"
           >
-            <span className="text-[10px] font-bold">➜</span>
+            <span className="block text-[10px] font-bold">➜</span>
           </button>
 
           <div className="relative h-full flex items-center justify-center">
             {members.map((member, idx) => {
-              const position = idx - activeIdx;
+              let position = idx - activeIdx;
+              if (position > members.length / 2) position -= members.length;
+              if (position < -members.length / 2) position += members.length;
               const isActive = idx === activeIdx;
               const isVisible = Math.abs(position) <= 1;
 
@@ -603,9 +610,9 @@ export default function EEPage() {
               
               <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 md:gap-4">
                 <img src="/src/assets/bulsu.svg" alt="BULSU" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
-                <img src="/public/COE.svg" alt="COE" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
-                <img src="/public/departments/EE/ee-logo.png" alt="EE" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
-                <img src="/public/departments/EE/watermark.png" alt="IIEE" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
+                <img src="/COE.svg" alt="COE" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
+                <img src="/departments/EE/ee-logo.png" alt="EE" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
+                <img src="/departments/EE/watermark.png" alt="IIEE" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
               </div>
               
               <div className="space-y-1">
