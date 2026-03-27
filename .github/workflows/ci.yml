@@ -8,9 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  # --- 1. LINT AND TEST (Always Runs) ---
-  lint-and-test:
-    name: "Lint and Test"
+  # --- JOB 1: LINT ---
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -22,18 +21,32 @@ jobs:
           cache: 'npm'
       - name: Install Dependencies
         run: npm ci
-      - name: Run Lint
+      - name: Run ESLint
         run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
-      - name: Run Type Check
+      - name: Type Check
         run: npx tsc -b || true
-      - name: Run Unit Tests
+
+  # --- JOB 2: TEST ---
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Run Vitest
         run: npx vitest run --coverage
 
-# --- 2. PR LOGIC ---
+  # --- JOB 3: PR AUTOMATION (Only for Pull Requests) ---
   handle-pr:
-    name: "Auto Merge and Close PR"
     runs-on: ubuntu-latest
-    needs: lint-and-test
+    needs: test
     if: github.event_name == 'pull_request'
     permissions:
       contents: write
@@ -42,56 +55,38 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history so GH CLI knows where it is
-
-      - name: Attempt Auto Merge
-        id: merge
-        continue-on-error: true
+          fetch-depth: 0
+      - name: Auto Merge and Close
         run: |
-          # Use the --repo flag to be explicit about which repo to close
           gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch --repo ${{ github.repository }}
+          gh pr close ${{ github.event.pull_request.number }} --comment "Auto-merged and closing." --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Auto-Close PR
-        if: always()
-        run: |
-          # Use the --repo flag here too
-          gh pr close ${{ github.event.pull_request.number }} --comment "Workflow finished." --repo ${{ github.repository }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-  # --- 3. DEPLOYMENT (Success Path) ---
+  # --- JOB 4: BUILD + PUSH + DEPLOY ---
   build-and-deploy:
-    name: "Build and Deploy"
     runs-on: ubuntu-latest
-    needs: [lint-and-test, handle-pr]
-    # This runs if tests passed AND (it's a push OR the PR merge was successful)
-    if: |
-      always() && 
-      needs.lint-and-test.result == 'success' && 
-      (github.event_name == 'push' || needs.handle-pr.result == 'success')
+    needs: test
+    if: success() 
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          ref: dept/EE
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and Push
+      - name: Build and Tag Docker Image
         run: |
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           IMAGE_LATEST="ghcr.io/$OWNER_LOWER/webeng-ee:latest"
           docker build --no-cache -t $IMAGE_LATEST .
           docker push $IMAGE_LATEST
-      - name: Trigger Render
+      - name: Trigger Render Deployment
         env:
           RENDER_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: curl -X POST "$RENDER_URL"
