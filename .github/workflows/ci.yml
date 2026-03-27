@@ -48,7 +48,7 @@ jobs:
           name: coverage-reports
           path: coverage/
 
-  # --- JOB 3: AUTO-MERGE ---
+  # --- JOB 3: AUTO-MERGE (ONLY FOR PRs) ---
   auto-merge:
     runs-on: ubuntu-latest
     needs: test
@@ -64,28 +64,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # --- JOB 4: NOTIFY AUTO-MERGE FAILURE ---
-  notify-failure:
-    runs-on: ubuntu-latest
-    needs: [test, auto-merge]
-    if: failure() && github.event_name == 'pull_request'
-    steps:
-      - name: Notify PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: `⚠️ **CI/CD Automation Failed**\n\nThe pipeline stopped because tests failed or a merge conflict occurred. Please check the logs.`
-            });
-
-  # --- JOB 5: BUILD + PUSH + DEPLOY (ONLY ON SUCCESSFUL MERGE) ---
+  # --- JOB 4: BUILD + PUSH + DEPLOY ---
   build-and-deploy:
     runs-on: ubuntu-latest
-    needs: auto-merge
-    if: success()
+    needs: [test, auto-merge]
+    if: |
+      always() && 
+      (needs.test.result == 'success') && 
+      (needs.auto-merge.result == 'success' || needs.auto-merge.result == 'skipped')
     permissions:
       contents: read
       packages: write
@@ -113,15 +99,33 @@ jobs:
           RENDER_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: curl -X POST "$RENDER_URL"
 
-  # --- JOB 6: AUTO-CLOSE ---
+  # --- JOB 5: NOTIFY FAILURE (ONLY FOR PRs) ---
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: [test, auto-merge, build-and-deploy]
+    if: failure() && github.event_name == 'pull_request'
+    steps:
+      - name: Notify PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `❌ **Deployment/Merge Pipeline Failed**\n\nThe automation stopped. Please check the logs in the Actions tab.`
+            });
+
+  # --- JOB 6: AUTO-CLOSE (ONLY FOR PRs) ---
   auto-close-pr:
     runs-on: ubuntu-latest
-    needs: [auto-merge, notify-failure, build-and-deploy]
+    needs: [auto-merge, build-and-deploy]
     if: always() && github.event_name == 'pull_request'
     permissions:
       pull-requests: write
     steps:
       - name: Close Pull Request
-        run: gh pr close ${{ github.event.pull_request.number }} --comment "Workflow finished. Closing PR."
+        run: |
+          gh pr close ${{ github.event.pull_request.number }} --comment "CI/CD Pipeline complete. PR closed." || echo "PR already closed"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
