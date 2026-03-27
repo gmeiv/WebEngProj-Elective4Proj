@@ -238,3 +238,23 @@ jobs:
                 body: `⏳ **Merge Status Unknown**\n\nPlease check the PR merge status. May need to wait for branch protection rules or other status checks.`
               });
             }
+
+
+  # --- JOB 5: NOTIFY AUTO-MERGE FAILURE ---
+  notify-automerge-failure:
+    runs-on: ubuntu-latest
+    needs: auto-merge
+    if: failure()
+    steps:
+      - name: Notify Auto-Merge Failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (!context.payload.pull_request) return;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `⚠️ **Auto-Merge Failed**\n\nThe PR passed all checks but auto-merge encountered an error. Check the Actions logs for details.`
+            });
