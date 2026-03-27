@@ -14,14 +14,14 @@
 
 #careers .card:hover, #so .card:hover {
   
-  background-color:  #2f1d7f;
+  background-color:  #7F1D1D;
   transform: translateY(-4px);
   border: none;
   box-shadow: 
   0 12px 20px rgba(0, 0, 0, 0.2),
   0 0 10px rgba(127, 29, 29, 0.5),
   0 0 20px rgba(127, 29, 29, 0.4),
-  0 0 30px rgba(127, 29, 29, 0.3); 
+  0 0 30px rgba(127, 29, 29, 0.3); #
 }
 
 #careers .card:hover p, #careers .card:hover h4, #so .card:hover #so-title, #so .card:hover #so-text {
