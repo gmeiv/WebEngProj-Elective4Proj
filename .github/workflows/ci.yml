@@ -2,9 +2,12 @@ name: EE CI/CD Pipeline
 
 on:
   push:
-    branches: [dept/EE]
+    branches: 
+      - dept/EE
+      - '**'
   pull_request:
-    branches: [dept/EE]
+    branches:
+      - dept/EE
   workflow_dispatch:
 
 jobs:
