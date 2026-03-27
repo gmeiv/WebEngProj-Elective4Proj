@@ -13,10 +13,13 @@ RUN npm run build
 # --- PRODUCTION STAGE ---
 FROM nginx:stable-alpine
 
+# Clean nginx default files
 RUN rm -rf /usr/share/nginx/html/*
 
+# Copy build output
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# SPA routing (React Router fix)
 RUN printf 'server {\n\
     listen 80;\n\
     location / {\n\
@@ -28,6 +31,8 @@ RUN printf 'server {\n\
 
 EXPOSE 80
 
-HEALTHCHECK --interval=30s --timeout=5s CMD wget -qO- http://localhost:80/ || exit 1
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s \
+  CMD wget -qO- http://localhost:80/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
