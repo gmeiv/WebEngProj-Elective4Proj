@@ -80,7 +80,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- BUILD IMAGE (FIXED: NO CACHE ISSUE + 2 TAGS) ---
+      # --- BUILD IMAGE ---
       - name: Build and Tag Docker Image
         run: |
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -93,8 +93,6 @@ jobs:
           echo "IMAGE_LATEST=$IMAGE_LATEST" >> $GITHUB_ENV
 
           docker build --no-cache -t $IMAGE_VERSION -t $IMAGE_LATEST .
-
-          # verify build output (like CE)
           docker run --rm $IMAGE_VERSION ls /usr/share/nginx/html
 
       # --- PUSH BOTH TAGS ---
