@@ -4,270 +4,141 @@ on:
   push:
     branches: 
       - dept/EE
-      - '**'
   pull_request:
     branches:
       - dept/EE
   workflow_dispatch:
 
 jobs:
-
   # --- JOB 1: LINT ---
   lint:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
       - name: Install Dependencies
         run: npm ci
-
       - name: Run ESLint
         run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/EE.tsx
-
       - name: Type Check
         run: npx tsc -b || true
-
       - name: Notify Lint Failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
             if (!context.payload.pull_request) return;
-            
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `❌ Lint Check Failed\n\nESLint or TypeScript validation failed. Please check the logs and fix the issues.`
+              body: `❌ **Lint Check Failed**\n\nESLint or TypeScript validation failed. Please check the logs.`
             });
-
 
   # --- JOB 2: TEST ---
   test:
     runs-on: ubuntu-latest
     needs: lint
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
       - name: Install Dependencies
         run: npm ci
-
       - name: Run Vitest
         run: npx vitest run --coverage
-
-      - name: Upload Coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
-          path: coverage/
-
       - name: Notify Test Failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
             if (!context.payload.pull_request) return;
-            
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `❌ Tests Failed\n\nUnit tests did not pass. Please check the logs and fix the failing tests.`
+              body: `❌ **Tests Failed**\n\nUnit tests did not pass. Please fix the failing tests.`
             });
 
-
-  # --- JOB 3: BUILD + PUSH + DEPLOY ---
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    needs: test
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # --- BUILD IMAGE ---
-      - name: Build and Tag Docker Image
-        run: |
-          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          SAFE_TAG=$(echo "${{ github.ref_name }}" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
-
-          IMAGE_VERSION="ghcr.io/$OWNER_LOWER/webeng-ee:$SAFE_TAG"
-          IMAGE_LATEST="ghcr.io/$OWNER_LOWER/webeng-ee:latest"
-
-          echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_ENV
-          echo "IMAGE_LATEST=$IMAGE_LATEST" >> $GITHUB_ENV
-
-          docker build --no-cache -t $IMAGE_VERSION -t $IMAGE_LATEST .
-          docker run --rm $IMAGE_VERSION ls /usr/share/nginx/html
-
-      # --- PUSH BOTH TAGS ---
-      - name: Push Docker Image
-        run: |
-          docker push ${{ env.IMAGE_VERSION }}
-          docker push ${{ env.IMAGE_LATEST }}
-
-      # --- TRIGGER RENDER DEPLOY ---
-      - name: Trigger Render Deployment
-        if: success()
-        env:
-          RENDER_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
-        run: |
-          echo "Triggering Render Deployment..."
-          curl -X POST "$RENDER_URL"
-
-      - name: Notify Build Failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            if (!context.payload.pull_request) return;
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: `❌ Build/Deploy Failed\n\nDocker build, image push, or deployment failed. Please check the logs and fix the issues.`
-            });
-
-
-  # --- JOB 4: AUTO-MERGE OR NOTIFY CONFLICTS ---
+  # --- JOB 3: AUTO-MERGE ---
   auto-merge:
     runs-on: ubuntu-latest
-    needs: [lint, test, build-and-deploy]
-    if: success()
+    needs: test
+    if: success() && github.event_name == 'pull_request'
     permissions:
       contents: write
       pull-requests: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+      - name: Merge Pull Request
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --squash --body "Auto-merged by CI/CD Pipeline"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check for Conflicts & Auto-Merge
-        uses: actions/github-script@v7
-        with:
-          script: |
-            if (!context.payload.pull_request) return;
-            
-            const prNumber = context.payload.pull_request.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            
-            // Get PR details
-            const pr = await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number: prNumber
-            });
-            
-            // Check if PR is mergeable
-            if (pr.data.mergeable === false) {
-              // Conflicts exist - get detailed info
-              const files = await github.rest.pulls.listFiles({
-                owner,
-                repo,
-                pull_number: prNumber
-              });
-              
-              // Extract conflicted files
-              const conflictedFiles = files.data
-                .filter(file => file.status === 'modified' || file.status === 'added')
-                .map(file => `- \`${file.filename}\` (Changed lines: ${file.changes})`)
-                .join('\n');
-              
-              const conflictList = conflictedFiles || '- Check PR files tab for conflicts';
-              
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: prNumber,
-                body: `⚠️ **Merge Conflicts Detected**\n\nThis PR has merge conflicts with the target branch \`${pr.data.base.ref}\`.\n\n**Conflicted Files:**\n${conflictList}\n\n**How to resolve:**\n1. \`git fetch origin\`\n2. \`git rebase origin/${pr.data.base.ref}\`\n3. Resolve conflicts in your editor (search for \`<<<<<<<\`, \`=======\`, \`>>>>>>>\`)\n4. \`git add .\`\n5. \`git rebase --continue\`\n6. \`git push --force-with-lease\`\n\n💡 Or use: \`git merge origin/${pr.data.base.ref}\` then resolve conflicts directly.`
-              });
-            } else if (pr.data.mergeable === true) {
-              // No conflicts - attempt auto-merge
-              try {
-                await github.rest.pulls.merge({
-                  owner,
-                  repo,
-                  pull_number: prNumber,
-                  merge_method: 'squash'
-                });
-                
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  body: `✅ **Auto-Merged Successfully**\n\nAll checks passed with no conflicts. PR has been automatically merged into \`${pr.data.base.ref}\`.`
-                });
-              } catch (error) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  body: `⚠️ **Auto-Merge Failed**\n\nError: ${error.message}`
-                });
-              }
-            } else {
-              // Status unknown - wait or notify
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: prNumber,
-                body: `⏳ **Merge Status Unknown**\n\nPlease check the PR merge status. May need to wait for branch protection rules or other status checks.`
-              });
-            }
-
-
-  # --- JOB 5: NOTIFY AUTO-MERGE FAILURE ---
+  # --- JOB 4: NOTIFY AUTO-MERGE FAILURE ---
   notify-automerge-failure:
     runs-on: ubuntu-latest
     needs: auto-merge
-    if: failure()
+    if: failure() && github.event_name == 'pull_request'
     steps:
-      - name: Notify Auto-Merge Failure
+      - name: Notify Merge Failure
         uses: actions/github-script@v7
         with:
           script: |
-            if (!context.payload.pull_request) return;
-            
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `⚠️ **Auto-Merge Failed**\n\nThe PR passed all checks but auto-merge encountered an error. Check the Actions logs for details.`
+              body: `⚠️ **Auto-Merge Failed**\n\nTests passed, but the merge failed (likely due to conflicts).`
             });
 
+  # --- JOB 5: BUILD + PUSH + DEPLOY (ONLY IF MERGED) ---
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    needs: auto-merge
+    if: success()
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: dept/EE # Build the merged state
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_LATEST="ghcr.io/$OWNER_LOWER/webeng-ee:latest"
+          docker build -t $IMAGE_LATEST .
+          docker push $IMAGE_LATEST
+      - name: Trigger Render Deployment
+        env:
+          RENDER_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: curl -X POST "$RENDER_URL"
 
-# --- JOB 6: FINAL CLOSE (SUCCESS OR FAILURE) ---
+  # --- JOB 6: FINAL CLOSE (SUCCESS OR FAILURE) ---
   closing-pr:
     runs-on: ubuntu-latest
-    needs: [auto-merge, notify-automerge-failure]
-    if: always() && github.event.pull_request.number != null
+    # Wait for everything else to resolve first
+    needs: [auto-merge, notify-automerge-failure, build-and-deploy]
+    if: always() && github.event_name == 'pull_request'
     permissions:
       pull-requests: write
     steps:
