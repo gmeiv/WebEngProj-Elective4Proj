@@ -41,7 +41,7 @@ jobs:
       - name: Install Dependencies
         run: npm ci
       - name: Run Vitest
-        run: npx vitest run --coverage
+        run: npx vitest run --coverage --reporter=quiet
       - name: Generate Test Summary
         if: always()
         run: |
