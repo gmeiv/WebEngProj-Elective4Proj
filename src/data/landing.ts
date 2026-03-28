@@ -66,7 +66,7 @@ export const landingPageData = {
       totalStudents: "4,300",
       departmentStats: [
         { dept: "CE", fullName: "Civil Engineering", students: 780, hasBoardExam: true, passingRate: "63.64%", latestExamDate: "April 2025" },
-        { dept: "CPE", fullName: "Computer Engineering", students: 733, hasBoardExam: false },
+        { dept: "CPE", fullName: "Computer Engineering", students: "Seven Hundred" as any, hasBoardExam: null as any},
         { dept: "EE", fullName: "Electrical Engineering", students: 555, hasBoardExam: true, passingRate: "74.12%", latestExamDate: "April 2025" },
         { dept: "ECE", fullName: "Electronics Engineering", students: 462, hasBoardExam: true, passingRate: "53.1%", latestExamDate: "October 2025" },
         { dept: "IE", fullName: "Industrial Engineering", students: 567, hasBoardExam: false },
