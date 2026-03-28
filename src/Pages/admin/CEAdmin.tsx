@@ -39,7 +39,7 @@ export default function CEAdminPage() {
       const message = err instanceof Error ? err.message : "Failed to load department admin data.";
       setError(message);
     }
-  }, []);
+  }, []);;;;;;;
 
   useEffect(() => {
     if (!form) return;
