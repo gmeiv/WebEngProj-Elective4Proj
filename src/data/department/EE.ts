@@ -1,10 +1,5 @@
 const base = "/departments/EE";
 
-// Simple utility function: add two numbers
-export function add(a: number, b: number): number {
-  return a + b;
-}
-
 export const EE = {
   code: "EE",
   title: "ELECTRICAL ENGINEERING",
