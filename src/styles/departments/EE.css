@@ -11,7 +11,7 @@
   background-color: white;
 }
 
-#careers .card:hover, #so .card:hover {{}
+#careers .card:hover, #so .card:hover {
   
   background-color:  #7F1D1D;
   transform: translateY(-4px);
