@@ -10,7 +10,7 @@ import {
   saveDeptDraft,
   saveDeptOverrides,
   type DepartmentEditableContent,
-} from "../../lib/departmentAdmin";]
+} from "../../lib/departmentAdmin";
 import { mergeWithShape } from "../../lib/jsonShape";
 import type { DepartmentData } from "../../types/department";
 import AdminAccessGate from "../../components/AdminAccessGate";
