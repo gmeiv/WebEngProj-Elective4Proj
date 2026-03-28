@@ -22,7 +22,7 @@ jobs:
       - name: Install Dependencies
         run: npm ci
       - name: Run ESLint
-        run: npx eslint src/Pages/admin/EEAdmin.tsx
+        run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/*.tsx
       - name: Type Check
         run: npx tsc -b || true
 
@@ -41,15 +41,7 @@ jobs:
       - name: Install Dependencies
         run: npm ci
       - name: Run Vitest
-        run: npx vitest run --coverage --reporter=quiet
-      - name: Generate Test Summary
-        if: always()
-        run: |
-          echo "# Vitest Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Test Files**: ✅ 2 passes - 2 total" >> $GITHUB_STEP_SUMMARY
-          echo "- **Test Cases**: ✅ 176 passes - 176 total" >> $GITHUB_STEP_SUMMARY
+        run: npx vitest run --coverage
 
   # --- JOB 3: PR AUTOMATION (Only for Pull Requests) ---
   handle-pr:
