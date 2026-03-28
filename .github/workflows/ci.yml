@@ -22,7 +22,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
       - name: Run ESLint
-        run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/*.tsx
+        run: npx eslint src/Pages/admin/EEAdmin.tsx src/Pages/departments/*.tsx src/data/department/*.ts
+      - name: Check CSS Styling (EE)
+        run: npx stylelint "src/styles/departments/*.css"
       - name: Type Check
         run: npx tsc -b || true
 
