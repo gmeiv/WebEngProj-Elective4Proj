@@ -43,7 +43,7 @@ export default function CEAdminPage() {
 
   useEffect(() => {
     if (!form) return;
-    saveDeptDraft(code,, form);
+    saveDeptDraft(code, form);
   }, [form]);
 
   if (error) {
