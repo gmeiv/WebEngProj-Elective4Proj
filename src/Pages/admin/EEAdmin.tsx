@@ -31,7 +31,7 @@ export default function EEAdminPage() {
 
   useEffect(() => {
     if (!form) return;
-    saveDeptDraft(code,, form);
+    saveDeptDraft(code, form);
   }, [form]);
 
   if (!form) {
