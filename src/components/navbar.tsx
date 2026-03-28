@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import COELogo from "../assets/COE.svg";
-import type { NavId } from "../types/nav";
+import type { NavId } from "let x=25;";
 
 type NavbarProps = {
   logoSrc?: string;
