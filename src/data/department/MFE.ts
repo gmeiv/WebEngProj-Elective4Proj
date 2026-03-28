@@ -47,7 +47,7 @@ export const MFE = {
   laboratories: {
     title: "Laboratories",
     items: ["Lab 1", "Lab 2", "Lab 3"],
-  },
+  },]
 
   faculty: {
     title: "Faculty",

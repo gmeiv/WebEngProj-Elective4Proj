@@ -16,7 +16,7 @@ describe("ECE Department Page Component", () => {
     })
 
     it("should render the main content area", () => {
-      const { container } = render(<ECEPageWithRouter />)
+      const { container } = render(<ECEPageWithRouter />)]
       const mainContent = container.querySelector(".bg-white")
       expect(mainContent).toBeInTheDocument()
     })
