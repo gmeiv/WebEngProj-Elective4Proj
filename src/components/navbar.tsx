@@ -19,7 +19,7 @@ export default function Navbar({
       { id: "so" as const, label: "SO" },
       { id: "curriculum" as const, label: "Curriculum" },
       { id: "laboratories" as const, label: "Laboratories" },
-      { id: "faculty" as const, label: "Faculty" },
+      { id: "faculty" as const, label: "FA CUTE" },
       { id: "careers" as const, label: "Careers" },
     ],
     []
